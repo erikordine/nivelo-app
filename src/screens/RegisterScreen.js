@@ -1,3 +1,5 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
@@ -48,8 +50,7 @@ export default class RegisterScreen extends React.Component {
       this.setState({ loading: true });
       await firebase.auth().createUserWithEmailAndPassword(e, p);
       Alert.alert("Sucesso", "Cadastro realizado com sucesso");
-    //   this.props.navigation.navigate("Login");
-
+      //   this.props.navigation.navigate("Login");
     } catch (error) {
       console.log("Firebase singnup error:", error?.code, error?.message);
       const code = error?.code || "";
@@ -92,36 +93,89 @@ export default class RegisterScreen extends React.Component {
 
         <Text style={s.title}>Criar Conta</Text>
 
+        {/* E-MAIL */}
         <Text style={s.label}>E-mail:</Text>
-        <TextInput
-          style={s.input}
-          autoCapitalize="none" // Evita que a primeira letra fique maiúscula
-          keyboardAppearance="email-address"
-          value={email}
-          onChangeText={(t) => this.setState({ email: t })}
-          placeholder="voce@email.com"
-          placeholderTextColor="#9Ca3AF"
-        />
+        <View style={s.inputRow}>
+          <Ionicons
+            name="mail-outline"
+            size={20}
+            color="#9CA3AF"
+            style={s.icon}
+          />
+          <TextInput
+            style={s.inputText}
+            autoCapitalize="none"
+            keyboardType="email-address" // <- vc usou keyboardAppearance por engano
+            value={email}
+            onChangeText={(t) => this.setState({ email: t })}
+            placeholder="voce@email.com"
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
 
+        {/* SENHA */}
         <Text style={s.label}>Senha:</Text>
-        <TextInput
-          style={s.input}
-          secureTextEntry={true}
-          value={password}
-          onChangeText={(t) => this.setState({ password: t })}
-          placeholder="senha"
-          placeholderTextColor="#9Ca3AF"
-        />
+        <View style={s.inputRow}>
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color="#9CA3AF"
+            style={s.icon}
+          />
+          <TextInput
+            style={s.inputText}
+            secureTextEntry={!this.state.showPassword}
+            value={password}
+            onChangeText={(t) => this.setState({ password: t })}
+            placeholder="senha"
+            placeholderTextColor="#9CA3AF"
+          />
+          <TouchableOpacity
+            onPress={() =>
+              this.setState({ showPassword: !this.state.showPassword })
+            }
+          >
+            <Ionicons
+              name={this.state.showPassword ? "eye-outline" : "eye-off-outline"}
+              size={20}
+              color="#9CA3AF"
+            />
+          </TouchableOpacity>
+        </View>
 
+        {/* CONFIRMAR SENHA */}
         <Text style={s.label}>Confirmar Senha:</Text>
-        <TextInput
-          style={s.input}
-          secureTextEntry={true}
-          value={confirmPassword}
-          onChangeText={(t) => this.setState({ confirmPassword: t })}
-          placeholder="confirmar senha"
-          placeholderTextColor="#9Ca3AF"
-        />
+        <View style={s.inputRow}>
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color="#9CA3AF"
+            style={s.icon}
+          />
+          <TextInput
+            style={s.inputText}
+            secureTextEntry={!this.state.showConfirm}
+            value={confirmPassword}
+            onChangeText={(t) => this.setState({ confirmPassword: t })}
+            placeholder="confirmar senha"
+            placeholderTextColor="#9CA3AF"
+          />
+          <TouchableOpacity
+            onPress={() =>
+              this.setState({ showConfirm: !this.state.showConfirm })
+            }
+          >
+            <Ionicons
+              name={this.state.showPassword ? "eye-outline" : "eye-off-outline"}
+              size={20}
+              color="#9CA3AF"
+            />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={s.register} onPress={() => router.push("/login")}>
+          Entrar na Conta
+        </Text>
 
         <TouchableOpacity
           style={[s.btn, !canSubit && { opacity: 0.5 }]}
@@ -155,8 +209,10 @@ const s = StyleSheet.create({
   },
   label: {
     color: "#E5E7EB",
-    marginTop: 8,
+    marginTop: 15,
     marginBottom: 6,
+    left: 6,
+    fontWeight: "bold",
   },
   input: {
     backgroundColor: "#111827",
@@ -192,5 +248,27 @@ const s = StyleSheet.create({
     width: 120,
     height: 120,
     resizeMode: "contain",
+  },
+  register: {
+    color: "#E5E7EB",
+    marginTop: 15,
+    marginBottom: 6,
+    left: 6,
+    fontWeight: "bold",
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#111827",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  inputText: {
+    flex: 1,
+    color: "#E5E7EB",
   },
 });
