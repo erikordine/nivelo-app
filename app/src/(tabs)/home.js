@@ -3,8 +3,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import Config from "../screens/Config";
-
 
 export default function Dashboard() {
   return (
@@ -89,7 +87,7 @@ const s = StyleSheet.create({
     backgroundColor: "#0F172A",
     padding: 16,
   },
-
+  
   /* HEADER */
   brandRow: {
     padding: 4,
