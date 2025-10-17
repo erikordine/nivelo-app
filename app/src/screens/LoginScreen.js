@@ -11,72 +11,84 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { firebase } from "../firebase/config";
+import { firebase } from "../../src/firebase/config";
 
-export default class RegisterScreen extends React.Component {
+export default class LoginScreen extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      user: "",
       email: "",
       password: "",
-      confirmPassword: "",
+      loading: false,
+      showPassword: false,
     };
   }
 
-  gravar = async () => {
-    const { email, password, confirmPassword } = this.state;
+  // Login
+  ler = async () => {
+    const email = (this.state.email || "").trim();
+    const password = (this.state.password || "").trim();
 
-    // Verificação de preenchimento
-    const e = (email || "").trim();
-    const p = (password || "").trim();
-    const cp = (confirmPassword || "").trim();
-
-    if (!e || !p || !cp) {
+    if (!email || !password) {
       Alert.alert("Erro", "Preencha todos os campos");
       return;
     }
-    if (p !== cp) {
-      Alert.alert("Erro", "As senhas devem ser iguais");
-      return;
-    }
-    if (p.length < 6) {
-      Alert.alert("Erro", "A senha deve ter pelo menos 6 caracteres");
-      return;
-    }
 
-    // Criação do usuario
+    this.setState({ loading: true });
     try {
-      this.setState({ loading: true });
-      await firebase.auth().createUserWithEmailAndPassword(e, p);
-      Alert.alert("Sucesso", "Cadastro realizado com sucesso");
-      //   this.props.navigation.navigate("Login");
+      await firebase.auth().signInWithEmailAndPassword(email, password);
+      Alert.alert("Sucesso", "Login efetuado com sucesso");
+      router.replace("/(tabs)/dashboard");
     } catch (error) {
-      console.log("Firebase singnup error:", error?.code, error?.message);
       const code = error?.code || "";
-
-      const map = {
-        "auth/email-already-in-use": "Este e-mail já está em uso.",
-        "auth/weak-password": "Senha muito fraca (mín. 6).",
-        "auth/invalid-email": "E-mail inválido.",
-        "auth/operation-not-allowed":
-          "Login por e-mail/senha está desabilitado no Firebase.",
-        "auth/network-request-failed": "Falha de rede. Verifique sua conexão.",
-        "auth/invalid-api-key":
-          "API key inválida nas configurações do Firebase.",
-        "auth/app-not-authorized":
-          "App não autorizado para este projeto Firebase.",
-      };
-
-      Alert.alert("Erro", map[code] || "Erro desconhecido");
+      if (code === "auth/invalid-email") {
+        Alert.alert("Formato do e-mail inválido");
+      } else if (
+        code === "auth/user-not-found" ||
+        code === "auth/wrong-password" ||
+        code === "auth/invalid-credential"
+      ) {
+        Alert.alert("Credenciais inválidas", "Confira e tente novamente.");
+      } else if (code === "auth/network-request-failed") {
+        Alert.alert("Erro de rede", "Verifique sua conexão.");
+      } else {
+        Alert.alert("Ocorreu um erro", code || "desconhecido");
+      }
     } finally {
       this.setState({ loading: false });
     }
   };
 
+  recoverPassword = async () => {
+    const email = (this.state.email || "").trim();
+    if (!email) {
+      Alert.alert(
+        "Informe seu e-mail",
+        "Digite seu e-mail para recuperar a senha."
+      );
+      return;
+    }
+    try {
+      await firebase.auth().sendPasswordResetEmail(email);
+      Alert.alert(
+        "E-mail enviado",
+        "Confira seu e-mail para recuperar a senha."
+      );
+    } catch (e) {
+      const code = e?.code || "";
+      if (code === "auth/invalid-email") {
+        Alert.alert("E-mail inválido", "Confira o endereço digitado.");
+      } else if (code === "auth/user-not-found") {
+        Alert.alert("Usuário não encontrado", "Verifique o e-mail informado.");
+      } else {
+        Alert.alert("Erro", code || "Falha ao enviar e-mail.");
+      }
+    }
+  };
+
   render() {
-    const { email, password, confirmPassword, loading } = this.state;
-    const canSubit = email && password && confirmPassword && !loading; // Verifica se pode enviar
+    const { email, password, loading } = this.state;
+    const canSubmit = !!email && !!password;
 
     return (
       <View style={s.container}>
@@ -91,7 +103,7 @@ export default class RegisterScreen extends React.Component {
           />
         </View>
 
-        <Text style={s.title}>Criar Conta</Text>
+        <Text style={s.title}>Login</Text>
 
         {/* E-MAIL */}
         <Text style={s.label}>E-mail:</Text>
@@ -105,7 +117,7 @@ export default class RegisterScreen extends React.Component {
           <TextInput
             style={s.inputText}
             autoCapitalize="none"
-            keyboardType="email-address" // <- vc usou keyboardAppearance por engano
+            keyboardType="email-address"
             value={email}
             onChangeText={(t) => this.setState({ email: t })}
             placeholder="voce@email.com"
@@ -143,49 +155,26 @@ export default class RegisterScreen extends React.Component {
           </TouchableOpacity>
         </View>
 
-        {/* CONFIRMAR SENHA */}
-        <Text style={s.label}>Confirmar Senha:</Text>
-        <View style={s.inputRow}>
-          <Ionicons
-            name="lock-closed-outline"
-            size={20}
-            color="#9CA3AF"
-            style={s.icon}
-          />
-          <TextInput
-            style={s.inputText}
-            secureTextEntry={!this.state.showConfirm}
-            value={confirmPassword}
-            onChangeText={(t) => this.setState({ confirmPassword: t })}
-            placeholder="confirmar senha"
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity
-            onPress={() =>
-              this.setState({ showConfirm: !this.state.showConfirm })
-            }
-          >
-            <Ionicons
-              name={this.state.showPassword ? "eye-outline" : "eye-off-outline"}
-              size={20}
-              color="#9CA3AF"
-            />
-          </TouchableOpacity>
+        <View style={s.separator}>
+          <Text style={s.recover} onPress={this.recoverPassword}>
+            Recuperar Senha
+          </Text>
+
+          {/* Cadastro */}
+          <Text style={s.register} onPress={() => router.push("/register")}>
+            Criar Conta
+          </Text>
         </View>
 
-        <Text style={s.register} onPress={() => router.push("/login")}>
-          Entrar na Conta
-        </Text>
-
         <TouchableOpacity
-          style={[s.btn, !canSubit && { opacity: 0.5 }]}
-          onPress={() => this.gravar()}
-          disabled={!canSubit || loading}
+          style={[s.btn, (!canSubmit || loading) && { opacity: 0.6 }]}
+          onPress={this.ler}
+          disabled={!canSubmit || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#052e12" />
+            <ActivityIndicator size="small" color="#E5E7EB" />
           ) : (
-            <Text style={s.btnText}>Registrar</Text>
+            <Text style={s.btnText}>Entrar</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -209,7 +198,7 @@ const s = StyleSheet.create({
   },
   label: {
     color: "#E5E7EB",
-    marginTop: 15,
+    marginTop: 8,
     marginBottom: 6,
     left: 6,
     fontWeight: "bold",
@@ -249,11 +238,24 @@ const s = StyleSheet.create({
     height: 120,
     resizeMode: "contain",
   },
-  register: {
+  separator: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  recover: {
     color: "#E5E7EB",
-    marginTop: 15,
+    marginTop: 8,
     marginBottom: 6,
     left: 6,
+    fontWeight: "bold",
+  },
+  register: {
+    color: "#E5E7EB",
+    marginTop: 8,
+    marginBottom: 6,
+    right: 6,
     fontWeight: "bold",
   },
   inputRow: {
