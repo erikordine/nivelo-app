@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { firebase } from "../../src/firebase/config";
+import { firebase } from "../../../firebase/config";
 
 export default class RegisterScreen extends React.Component {
   constructor(props) {

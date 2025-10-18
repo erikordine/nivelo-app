@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import firebase from "firebase/compat/app";
 import { useState } from "react";
 import {
   Alert,
@@ -11,6 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { auth, db } from "../../../firebase/config";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 export default function NewLog() {
   const [glicose, setGlicose] = useState("");
@@ -19,6 +20,12 @@ export default function NewLog() {
   const [insulina, setInsulina] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const toNumberOrNull = (value) => {
+  if (value === "" || value == null) return null;
+  return Number(String(value).replace(",", "."));
+};
+
 
   // Utilizado para nao ficar repetindo this.
   const save = async () => {
@@ -32,27 +39,20 @@ export default function NewLog() {
         "Informe um valor de glicemia entre 20 e 900."
       );
 
-    // Pega o id do usuario
-    const uid = firebase.auth().currentUser.uid;
-    if (!uid)
-      return Alert.alert("Atencao", "Nao foi possivel identificar o usuario.");
-
     setLoading(true);
     try {
-      // Escreve dentro de /users/{uid}/logs o registro
-      await firebase
-        .firestore()
-        .collection("users")
-        .doc(uid)
-        .collection("logs")
-        .add({
-          glicose: g,
-          context,
-          carboidrato: carboidrato ? Number(carboidrato) : null,
-          insulina: insulina ? Number(insulina) : null,
-          note: note?.trim() || null,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(), // Pega o timestamp do servidor
-        });
+      const uid = auth().currentUser.uid;
+      if (!uid) {
+        throw new Error("Nao foi possivel identificar o usuario.");
+      }
+      await addDoc(collection(db, "users", uid, "logs"), {
+        glicose: g,
+        context,
+        carboidrato: toNumberOrNull(carboidrato),
+        insulina: toNumberOrNull(insulina),
+        note: note?.trim() || null,
+        createdAt: serverTimestamp(),
+      })
 
       Alert.alert("Sucesso", "Registro salvo!");
       router.back();
@@ -73,6 +73,8 @@ export default function NewLog() {
           backgroundColor: "#0b2b1a",
         },
       ]}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: context === value }}
     >
       <Text style={{ color: context === value ? "#E5E7EB" : "#9CA3AF" }}>
         {label}
@@ -248,7 +250,6 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0F172A",
     padding: 16,
-    
   },
   title: {
     color: "#E5E7EB",
@@ -261,7 +262,6 @@ const s = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 6,
     fontWeight: "bold",
-    
   },
   inputRow: {
     flexDirection: "row",

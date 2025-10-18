@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { firebase } from "../../src/firebase/config";
+import { firebase } from "../../../firebase/config";
 
 export default class LoginScreen extends React.Component {
   constructor(props) {
@@ -38,7 +38,7 @@ export default class LoginScreen extends React.Component {
     try {
       await firebase.auth().signInWithEmailAndPassword(email, password);
       Alert.alert("Sucesso", "Login efetuado com sucesso");
-      router.replace("/(tabs)/dashboard");
+      router.replace("/src/(tabs)/home");
     } catch (error) {
       const code = error?.code || "";
       if (code === "auth/invalid-email") {
