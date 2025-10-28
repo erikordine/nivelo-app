@@ -1,12 +1,82 @@
-// Dashboard.jsx
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useState } from "react";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { auth, rtdb } from "../../../firebase/config";
 
+// Funções de ajuda
+const nomeContexto = (c) =>
+  ({ jejum: "jejum", pre: "pré", pos: "pós", random: "aleatório" }[c] || c);
+
+const horaMinutos = (ts) => {
+  if (!ts) return "-";
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+};
 
 export default function Dashboard() {
+  const [logs, setLogs] = useState([]); // Ultimo registro
+  const [ultimo, setUltimo] = useState({}); // Ultimo (mais recente)
+
+  // NOVO: Usa useFocusEffect para rodar a lógica SEMPRE que a tela ganha foco
+  useFocusEffect(
+    useCallback(() => {
+      // Verifica quem é o usuario
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      // limpa o estado ao focar
+      setLogs([]);
+      setUltimo(undefined);
+
+      const ref = rtdb
+        .ref(`users/${uid}/logs`)
+        .orderByChild("createdAt")
+        .limitToLast(5);
+
+      const handleSnap = (snap) => {
+        const obj = snap.val() || {}; // Evita erro quando vazio
+
+        const lista = Object.entries(obj).map(([id, value]) => {
+          // Lógica de fallback para pegar o timestamp correto
+          const timestamp = value.createdAt || value.createAt; // Tenta 'createdAt', se não achar, usa 'createAt'
+          return { id, ...value, createdAt: timestamp }; // Padroniza para 'createdAt' no estado do React
+        });
+
+        // Ordena usando o timestamp padronizado (do mais recente para o mais antigo)
+        lista.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        setLogs(lista);
+        setUltimo(lista[0]);
+      };
+
+      // 1. Liga o listener quando a tela está focada
+      ref.on("value", handleSnap);
+
+      // 2. Retorna a função de limpeza que desliga o listener quando a tela perde o foco
+      return () => ref.off("value", handleSnap);
+
+      // A lista de dependências está vazia, pois o listener é gerenciado pelo foco
+    }, [])
+  );
+
   return (
-    <View style={s.container}>
+    // ... O restante do componente permanece inalterado
+    <ScrollView
+      style={s.container}
+      contentContainerStyle={s.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
       <View style={s.brandRow}>
         <View style={s.brandLeft}>
@@ -31,9 +101,17 @@ export default function Dashboard() {
       </View>
 
       <View style={s.cardBig}>
-        <Text style={s.bigValue}>112</Text>
+        <Text style={s.bigValue}>
+          {ultimo?.glicose != null ? ultimo.glicose : "-"}
+        </Text>
         <Text style={s.unit}>mg/dL</Text>
-        <Text style={s.subtle}>pós-refeição • hoje 01:44</Text>
+        <Text style={s.subtle}>
+          {ultimo
+            ? `${nomeContexto(ultimo.context)} • ${horaMinutos(
+                ultimo.createdAt
+              )}`
+            : ""}
+        </Text>
         <View style={s.badgeNormal}>
           <Text style={s.badgeText}>Normal</Text>
         </View>
@@ -52,6 +130,14 @@ export default function Dashboard() {
         <TouchableOpacity
           style={s.card}
           onPress={() => router.push("/src/history")}
+        >
+          <Ionicons name="stats-chart" size={28} color="#22C55E" />
+          <Text style={s.cardText}>Histórico</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={s.card}
+          onPress={() => router.push("/src/wda")}
         >
           <Ionicons name="stats-chart" size={28} color="#22C55E" />
           <Text style={s.cardText}>Histórico</Text>
@@ -77,17 +163,41 @@ export default function Dashboard() {
       </View>
 
       <Text style={s.sectionTitle}>Registros recentes</Text>
-    </View>
+
+      {/* Lista de registros */}
+      {logs.length === 0 ? (
+        <Text style={{ color: "#9CA3AF", marginLeft: 6 }}>
+          Sem registros ainda
+        </Text>
+      ) : (
+        // Mapeia os registros
+        logs.map((log) => (
+          <View key={log.id} style={s.logRow}>
+            <Ionicons name="water-outline" size={18} color="#22C55E" />
+            <Text style={s.logText}>
+              {log.glicose} mg/dL • {nomeContexto(log.context)} •{" "}
+              {horaMinutos(log.createdAt)}
+            </Text>
+          </View>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
+  // O container agora usa a altura total da tela, permitindo que a ScrollView funcione.
   container: {
     flex: 1,
     backgroundColor: "#0F172A",
-    padding: 16,
+    // Não tem mais padding aqui, movemos para contentContainerStyle
   },
-  
+  // NOVO estilo para dar espaçamento interno ao conteúdo
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 50, // Adiciona espaço extra para que o último item não fique escondido pela Tab Bar
+  },
+
   /* HEADER */
   brandRow: {
     padding: 4,
@@ -193,5 +303,15 @@ const s = StyleSheet.create({
     fontWeight: "800",
     marginTop: 8,
     marginBottom: 8,
+  },
+  // lista de recentes
+  logRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  logText: {
+    color: "#E5E7EB",
+    marginLeft: 8,
   },
 });

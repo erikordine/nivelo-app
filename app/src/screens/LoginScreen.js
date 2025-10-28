@@ -11,7 +11,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { firebase } from "../../../firebase/config";
+// Importação do firebase/config, que deve expor firebase (compat app) e db (Firestore)
+import { firebase, db } from "../../../firebase/config";
+
+
+// Função para criar/atualizar o documento do usuário no Firestore
+async function userDocLogin(user) {
+  // Nota: db é o Firestore, não o Realtime DB
+  const ref = db.collection("users").doc(user.uid);
+  await ref.set({
+    uid: user.uid,
+    email: user.email || null,
+    // Nota: Acesso ao FieldValue via firebase.firestore
+    lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(), 
+  }, { merge: true });
+}
 
 export default class LoginScreen extends React.Component {
   constructor(props) {
@@ -30,15 +44,30 @@ export default class LoginScreen extends React.Component {
     const password = (this.state.password || "").trim();
 
     if (!email || !password) {
-      Alert.alert("Erro", "Preencha todos os campos");
+      // Usando Alert (conforme seu código)
+      Alert.alert("Erro", "Preencha todos os campos"); 
       return;
     }
 
+    if (this.state.loading) return; // Evita duplo click
     this.setState({ loading: true });
     try {
-      await firebase.auth().signInWithEmailAndPassword(email, password);
+      // CORREÇÃO: Usar await para autenticar e obter o userCredential
+      const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+      const user = userCredential.user; // Extrai o objeto User real
+
+      // Garantir o user doc
+      try {
+        // Agora passando o objeto user válido
+        await userDocLogin(user); 
+      } catch (error) {
+        console.warn('Falha ao garantir o user doc:', error?.message);
+      }
+      
+      // Sucesso
       Alert.alert("Sucesso", "Login efetuado com sucesso");
       router.replace("/src/(tabs)/home");
+
     } catch (error) {
       const code = error?.code || "";
       if (code === "auth/invalid-email") {
@@ -48,6 +77,7 @@ export default class LoginScreen extends React.Component {
         code === "auth/wrong-password" ||
         code === "auth/invalid-credential"
       ) {
+        // Trata a maioria dos erros de credenciais/usuário não encontrado
         Alert.alert("Credenciais inválidas", "Confira e tente novamente.");
       } else if (code === "auth/network-request-failed") {
         Alert.alert("Erro de rede", "Verifique sua conexão.");

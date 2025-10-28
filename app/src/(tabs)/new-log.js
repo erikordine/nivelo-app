@@ -10,8 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { auth, db } from "../../../firebase/config";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { auth, firebase, rtdb } from "../../../firebase/config";
 
 export default function NewLog() {
   const [glicose, setGlicose] = useState("");
@@ -22,14 +21,15 @@ export default function NewLog() {
   const [loading, setLoading] = useState(false);
 
   const toNumberOrNull = (value) => {
-  if (value === "" || value == null) return null;
-  return Number(String(value).replace(",", "."));
-};
-
+    if (value === "" || value == null) return null;
+    return Number(String(value).replace(",", "."));
+  };
 
   // Utilizado para nao ficar repetindo this.
   const save = async () => {
     // Verificação
+    if (loading) return; // Evita duplo click
+
     const g = Number(glicose);
     if (!g || isNaN(g))
       return Alert.alert("Atenção", "Informe um valor válido de glicemia.");
@@ -41,23 +41,26 @@ export default function NewLog() {
 
     setLoading(true);
     try {
-      const uid = auth().currentUser.uid;
+      const uid = auth.currentUser?.uid;
       if (!uid) {
-        throw new Error("Nao foi possivel identificar o usuario.");
+        Alert.alert("Sessão", "Usuário não autenticado.");
+        return;
       }
-      await addDoc(collection(db, "users", uid, "logs"), {
+
+      const ref = rtdb.ref(`users/${uid}/logs`).push();
+      await ref.set({
         glicose: g,
         context,
         carboidrato: toNumberOrNull(carboidrato),
         insulina: toNumberOrNull(insulina),
         note: note?.trim() || null,
-        createdAt: serverTimestamp(),
-      })
-
-      Alert.alert("Sucesso", "Registro salvo!");
+        createAt: firebase.database.ServerValue.TIMESTAMP
+      });
+      Alert.alert("Sucesso", "Log salvo com sucesso!");
       router.back();
     } catch (e) {
-      Alert.alert("Erro", e?.message || "Nao foi possivel salvar o registro.");
+      console.log("[NewLog] Erro ao salvar o log:", e);
+      Alert.alert("Erro", e.message || "Nao foi possivel salvar o registro.");
     } finally {
       setLoading(false);
     }
@@ -120,7 +123,7 @@ export default function NewLog() {
         />
         <TextInput
           style={s.inputText}
-          keybordType="numeric"
+          keyboardType="numeric"
           value={glicose}
           onChangeText={setGlicose}
           placeholder="Glicose"

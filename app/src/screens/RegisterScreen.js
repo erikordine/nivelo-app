@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { firebase } from "../../../firebase/config";
+import { firebase, rtdb } from "../../../firebase/config";
 
 export default class RegisterScreen extends React.Component {
   constructor(props) {
@@ -48,13 +48,25 @@ export default class RegisterScreen extends React.Component {
     // Criação do usuario
     try {
       this.setState({ loading: true });
-      await firebase.auth().createUserWithEmailAndPassword(e, p);
-      Alert.alert("Sucesso", "Cadastro realizado com sucesso");
-      //   this.props.navigation.navigate("Login");
+
+      const userCredencial = await firebase
+        .auth()
+        .createUserWithEmailAndPassword(e, p);
+      const uid = userCredencial.user.uid;
+
+      await rtdb.ref(`users/${uid}/profile`).set({
+       uid,
+       email: e,
+       createdAt: firebase.database.ServerValue.TIMESTAMP,
+     });
+
+      Alert.alert("Sucesso", "Cadastro efetuado com sucesso");
+      router.replace("/src/screens/LoginScreen");
     } catch (error) {
       console.log("Firebase singnup error:", error?.code, error?.message);
       const code = error?.code || "";
 
+      // Validando erros
       const map = {
         "auth/email-already-in-use": "Este e-mail já está em uso.",
         "auth/weak-password": "Senha muito fraca (mín. 6).",
