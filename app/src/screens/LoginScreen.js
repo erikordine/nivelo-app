@@ -24,7 +24,7 @@ async function userDocLogin(user) {
     email: user.email || null,
     // Nota: Acesso ao FieldValue via firebase.firestore
     lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(), 
-  }, { merge: true });
+  });
 }
 
 export default class LoginScreen extends React.Component {
