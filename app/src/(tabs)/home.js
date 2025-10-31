@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [logs, setLogs] = useState([]); // Ultimo registro
   const [ultimo, setUltimo] = useState({}); // Ultimo (mais recente)
 
-  // NOVO: Usa useFocusEffect para rodar a lógica SEMPRE que a tela ganha foco
+  // Usa useFocusEffect para rodar a lógica SEMPRE que a tela ganha foco
   useFocusEffect(
     useCallback(() => {
       // Verifica quem é o usuario
@@ -190,12 +190,11 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0F172A",
-    // Não tem mais padding aqui, movemos para contentContainerStyle
   },
-  // NOVO estilo para dar espaçamento interno ao conteúdo
+
   contentContainer: {
     padding: 16,
-    paddingBottom: 50, // Adiciona espaço extra para que o último item não fique escondido pela Tab Bar
+    paddingBottom: 50,
   },
 
   /* HEADER */

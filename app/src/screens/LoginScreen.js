@@ -12,13 +12,13 @@ import {
   View,
 } from "react-native";
 // Importação do firebase/config, que deve expor firebase (compat app) e db (Firestore)
-import { firebase, db } from "../../../firebase/config";
+import { firebase, rtdb } from "../../../firebase/config";
 
 
 // Função para criar/atualizar o documento do usuário no Firestore
 async function userDocLogin(user) {
   // Nota: db é o Firestore, não o Realtime DB
-  const ref = db.collection("users").doc(user.uid);
+  const ref = rtdb.ref(`users/${user.uid}/profile`);
   await ref.set({
     uid: user.uid,
     email: user.email || null,
@@ -61,7 +61,7 @@ export default class LoginScreen extends React.Component {
         // Agora passando o objeto user válido
         await userDocLogin(user); 
       } catch (error) {
-        console.warn('Falha ao garantir o user doc:', error?.message);
+        console.error("userDocLogin", error);
       }
       
       // Sucesso
