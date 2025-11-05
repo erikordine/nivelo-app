@@ -6,20 +6,24 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 // Importações do Firebase
 import { auth, firebase, rtdb } from "../../../firebase/config";
 
-export default function NewLog() {
+export default function NewLogUploadScreens() {
   // 1. OBTÉM O ID DA ROTA PARA EDIÇÃO
   const { id } = useLocalSearchParams();
-  const isEditing = !!id; // Flag para saber se estamos editando
-  const [dataLoading, setDataLoading] = useState(isEditing); // Carrega dados iniciais se for edição
+  const isEditing = !!id; // Deve ser sempre true nesta tela
+  const [dataLoading, setDataLoading] = useState(isEditing);
 
   // ESTADOS DO FORMULÁRIO
   const [glicose, setGlicose] = useState("");
@@ -32,7 +36,6 @@ export default function NewLog() {
   // 2. FUNÇÃO AUXILIAR
   const toNumberOrNull = (value) => {
     if (value === "" || value == null) return null;
-    // Garante que o número seja uma string antes de substituir vírgula por ponto
     return Number(String(value).replace(",", "."));
   };
 
@@ -51,7 +54,6 @@ export default function NewLog() {
       .then((snapshot) => {
         const data = snapshot.val();
         if (data) {
-          // Preenche os estados com os dados do Firebase (usando String() defensivamente)
           setGlicose(String(data.glicose || ""));
           setContext(data.context || "random");
           setCarboidrato(String(data.carboidrato || ""));
@@ -72,7 +74,7 @@ export default function NewLog() {
       });
   }, [isEditing, id]);
 
-  // 4. FUNÇÃO DE SALVAR/ATUALIZAR UNIFICADA
+  // 4. FUNÇÃO DE ATUALIZAR
   const save = async () => {
     // Verificação inicial
     if (loading || dataLoading) return;
@@ -90,42 +92,27 @@ export default function NewLog() {
         return;
       }
 
-      // Dados comuns
+      // Dados para atualização
       const data = {
         glicose: g,
         context,
         carboidrato: toNumberOrNull(carboidrato),
         insulina: toNumberOrNull(insulina),
         note: note?.trim() || null,
-        // Adiciona timestamp de atualização para a edição
         updatedAt: firebase.database.ServerValue.TIMESTAMP,
       };
 
-      let logRef;
-      let successMessage = "Log salvo com sucesso!";
+      // MODO EDIÇÃO: Atualiza o nó existente
+      const logRef = rtdb.ref(`users/${uid}/logs/${id}`);
+      await logRef.update(data); // Usa update para não sobrescrever o createdAt
 
-      if (isEditing) {
-        // MODO EDIÇÃO: Atualiza o nó existente
-        logRef = rtdb.ref(`users/${uid}/logs/${id}`);
-        await logRef.update(data); // Usa update para não sobrescrever o createdAt
-        successMessage = "Registro atualizado com sucesso!";
-      } else {
-        // MODO CRIAÇÃO: Cria um novo nó
-        logRef = rtdb.ref(`users/${uid}/logs`).push();
-        await logRef.set({
-          ...data,
-          // Adiciona o timestamp de criação apenas no momento da criação
-          createdAt: firebase.database.ServerValue.TIMESTAMP,
-        });
-      }
-
-      Alert.alert("Sucesso", successMessage);
+      Alert.alert("Sucesso", "Registro atualizado com sucesso!");
       router.back();
     } catch (e) {
-      console.log("[NewLog] Erro ao salvar o log:", e);
+      console.log("[NewLogUploadScreens] Erro ao atualizar o log:", e);
       Alert.alert(
         "Erro",
-        e.message || "Não foi possível salvar/atualizar o registro."
+        e.message || "Não foi possível atualizar o registro."
       );
     } finally {
       setLoading(false);
@@ -171,136 +158,167 @@ export default function NewLog() {
   }
 
   return (
-    <View style={s.container}>
-      {/* Header */}
-      <View style={s.brandRow}>
-        <View style={s.brandLeft}>
-          <Image
-            source={require("../assets/images/nivelo_logo.png")}
-            style={s.brandLogo}
-          />
-          <Image
-            source={require("../assets/images/nivelo_name.png")}
-            style={s.brandName}
-          />
+    // 1. Teclado evita cobrir a View
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      {/* 2. Toque na tela fecha o teclado */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={s.container}>
+          {/* Header */}
+          <View style={s.brandRow}>
+            <View style={s.brandLeft}>
+              <Image
+                source={require("../assets/images/nivelo_logo.png")}
+                style={s.brandLogo}
+              />
+              <Image
+                source={require("../assets/images/nivelo_name.png")}
+                style={s.brandName}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={() => router.push("../screens/Config")}
+              style={s.iconButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="settings-outline" size={22} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Formulario */}
+          <Text style={s.title}>Editar Registro</Text>
+
+          <Text style={s.label}>Glicose:</Text>
+          <View style={s.inputRow}>
+            <Ionicons
+              name="water-outline"
+              size={20}
+              color="#9CA3AF"
+              style={s.icon}
+            />
+            <TextInput
+              style={s.inputText}
+              keyboardType="numeric"
+              value={String(glicose)}
+              onChangeText={setGlicose}
+              placeholder="Glicose"
+              placeholderTextColor="#9CA3AF"
+              // Botão Próximo
+              returnKeyType="next"
+              onSubmitEditing={() => {
+                /* Foco no próximo campo */
+              }}
+            />
+          </View>
+
+          <Text style={s.label}>Contexto</Text>
+          <View style={s.chipsRow}>
+            <Chip value="jejum" label="Fast" />
+            <Chip value="pre" label="Pre" />
+            <Chip value="pos" label="Pos" />
+            <Chip value="random" label="Random" />
+          </View>
+
+          <Text style={s.label}>Carboidratos (g) *</Text>
+          <View style={s.inputRow}>
+            <Ionicons
+              name="pizza-outline"
+              size={20}
+              color="#9CA3AF"
+              style={{ marginRight: 8 }}
+            />
+            <TextInput
+              style={s.inputText}
+              keyboardType="numeric"
+              value={String(carboidrato)}
+              onChangeText={setCarboidrato}
+              placeholder="ex.: 45"
+              placeholderTextColor="#9CA3AF"
+              returnKeyType="next"
+              onSubmitEditing={() => {
+                /* Foco no próximo campo */
+              }}
+            />
+          </View>
+
+          <Text style={[s.label, { marginTop: 12 }]}>
+            Insulina (U) — opcional
+          </Text>
+          <View style={s.inputRow}>
+            <Ionicons
+              name="medkit-outline"
+              size={20}
+              color="#9CA3AF"
+              style={{ marginRight: 8 }}
+            />
+            <TextInput
+              style={s.inputText}
+              keyboardType="numeric"
+              value={String(insulina)}
+              onChangeText={setInsulina}
+              placeholder="ex.: 4"
+              placeholderTextColor="#9CA3AF"
+              returnKeyType="next"
+              onSubmitEditing={() => {
+                /* Foco no próximo campo */
+              }}
+            />
+          </View>
+
+          <Text style={[s.label, { marginTop: 12 }]}>Anotação (opcional)</Text>
+          <View
+            style={[
+              s.inputRow,
+              { height: 80, alignItems: "flex-start", paddingTop: 8 },
+            ]}
+          >
+            <Ionicons
+              name="create-outline"
+              size={20}
+              color="#9CA3AF"
+              style={s.icon}
+            />
+            <TextInput
+              style={[s.inputText, { height: "100%" }]}
+              value={String(note)}
+              onChangeText={setNote}
+              placeholder="Ex.: após almoço"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              // Botão Concluído/Confirmar
+              returnKeyType="done"
+              onSubmitEditing={save}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={save}
+            disabled={loading}
+            style={[s.btn, loading && { opacity: 0.6 }]}
+          >
+            <Text style={s.btnText}>
+              {loading ? "Atualizando…" : "Atualizar Registro"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Button Back */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[s.btn, loading && { opacity: 0.6 }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+          >
+            <Text style={s.btnText}>
+              Voltar sem salvar
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          onPress={() => router.push("../screens/Config")}
-          style={s.iconButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="settings-outline" size={22} color="#9CA3AF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Formulario */}
-      <Text style={s.title}>
-        {isEditing ? "Editar Registro" : "Novo Registro"}
-      </Text>
-
-      <Text style={s.label}>Glicose:</Text>
-      <View style={s.inputRow}>
-        <Ionicons
-          name="water-outline"
-          size={20}
-          color="#9CA3AF"
-          style={s.icon}
-        />
-        <TextInput
-          style={s.inputText}
-          keyboardType="numeric"
-          value={String(glicose)}
-          onChangeText={setGlicose}
-          placeholder="Glicose"
-          placeholderTextColor="#9CA3AF"
-        />
-      </View>
-
-      <Text style={s.label}>Contexto</Text>
-      <View style={s.chipsRow}>
-        <Chip value="jejum" label="Fast" />
-        <Chip value="pre" label="Pre" />
-        <Chip value="pos" label="Pos" />
-        <Chip value="random" label="Random" />
-      </View>
-
-      <Text style={s.label}>Carboidratos (g) *</Text>
-      <View style={s.inputRow}>
-        <Ionicons
-          name="pizza-outline"
-          size={20}
-          color="#9CA3AF"
-          style={{ marginRight: 8 }}
-        />
-        <TextInput
-          style={s.inputText}
-          keyboardType="numeric"
-          value={String(carboidrato)}
-          onChangeText={setCarboidrato}
-          placeholder="ex.: 45"
-          placeholderTextColor="#9CA3AF"
-        />
-      </View>
-
-      <Text style={[s.label, { marginTop: 12 }]}>Insulina (U) — opcional</Text>
-      <View style={s.inputRow}>
-        <Ionicons
-          name="medkit-outline"
-          size={20}
-          color="#9CA3AF"
-          style={{ marginRight: 8 }}
-        />
-        <TextInput
-          style={s.inputText}
-          keyboardType="numeric"
-          value={String(insulina)}
-          onChangeText={setInsulina}
-          placeholder="ex.: 4"
-          placeholderTextColor="#9CA3AF"
-        />
-      </View>
-
-      <Text style={[s.label, { marginTop: 12 }]}>Anotação (opcional)</Text>
-      <View
-        style={[
-          s.inputRow,
-          { height: 80, alignItems: "flex-start", paddingTop: 8 },
-        ]}
-      >
-        <Ionicons
-          name="create-outline"
-          size={20}
-          color="#9CA3AF"
-          style={{ marginRight: 8 }}
-        />
-        <TextInput
-          style={[s.inputText, { height: "100%" }]}
-          value={String(note)}
-          onChangeText={setNote}
-          placeholder="Ex.: após almoço"
-          placeholderTextColor="#9CA3AF"
-          multiline
-        />
-      </View>
-
-      <TouchableOpacity
-        onPress={save}
-        disabled={loading}
-        style={[s.btn, loading && { opacity: 0.6 }]}
-      >
-        <Text style={s.btnText}>
-          {loading
-            ? isEditing
-              ? "Atualizando…"
-              : "Salvando…"
-            : isEditing
-            ? "Atualizar Registro"
-            : "Salvar registro"}
-        </Text>
-      </TouchableOpacity>
-    </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 

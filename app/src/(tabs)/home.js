@@ -134,14 +134,6 @@ export default function Dashboard() {
           <Ionicons name="stats-chart" size={28} color="#22C55E" />
           <Text style={s.cardText}>Histórico</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.card}
-          onPress={() => router.push("/src/wda")}
-        >
-          <Ionicons name="stats-chart" size={28} color="#22C55E" />
-          <Text style={s.cardText}>Histórico</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={s.row}>
