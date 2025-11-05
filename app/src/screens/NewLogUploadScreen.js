@@ -308,7 +308,7 @@ export default function NewLogUploadScreens() {
           {/* Button Back */}
           <TouchableOpacity
             onPress={() => router.back()}
-            style={[s.btn, loading && { opacity: 0.6 }]}
+            style={[s.btnReturn, loading && { opacity: 0.6 }]}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             activeOpacity={0.7}
           >
@@ -409,6 +409,13 @@ const s = StyleSheet.create({
   },
   btn: {
     backgroundColor: "#22C55E",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  btnReturn: {
+    backgroundColor: "#6B7280",
     padding: 14,
     borderRadius: 12,
     alignItems: "center",

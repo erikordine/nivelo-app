@@ -1,7 +1,8 @@
 // src/new-log/index.jsx (ou o caminho que você usa)
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -12,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Vibration,
   View,
 } from "react-native";
 import { auth, firebase, rtdb } from "../../../firebase/config";
@@ -40,6 +42,7 @@ export default function NewLog() {
 
     const g = Number(glicose);
     if (!g || isNaN(g)) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Atenção", "Informe um valor válido de glicemia.");
       return;
     }
@@ -66,6 +69,8 @@ export default function NewLog() {
         // use "createdAt" para bater com consultas/orderByChild("createdAt")
         createdAt: firebase.database.ServerValue.TIMESTAMP,
       });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Vibration.vibrate(40); // curtinha
 
       Alert.alert("Sucesso", "Log salvo com sucesso!");
       router.back();
@@ -186,7 +191,9 @@ export default function NewLog() {
             />
           </View>
 
-          <Text style={[s.label, { marginTop: 12 }]}>Insulina (U) — opcional</Text>
+          <Text style={[s.label, { marginTop: 12 }]}>
+            Insulina (U) — opcional
+          </Text>
           <View style={s.inputRow}>
             <Ionicons
               name="medkit-outline"
@@ -223,7 +230,10 @@ export default function NewLog() {
             />
             <TextInput
               ref={noteRef}
-              style={[s.inputText, { height: "100%", textAlignVertical: "top" }]}
+              style={[
+                s.inputText,
+                { height: "100%", textAlignVertical: "top" },
+              ]}
               value={note}
               onChangeText={setNote}
               placeholder="Ex.: após almoço"
