@@ -191,7 +191,7 @@ export default class LoginScreen extends React.Component {
           </Text>
 
           {/* Cadastro */}
-          <Text style={s.register} onPress={() => router.push("/register")}>
+          <Text style={s.register} onPress={() => router.push("/src/screens/RegisterScreen")}>
             Criar Conta
           </Text>
         </View>

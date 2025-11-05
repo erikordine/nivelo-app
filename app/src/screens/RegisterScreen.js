@@ -185,7 +185,7 @@ export default class RegisterScreen extends React.Component {
           </TouchableOpacity>
         </View>
 
-        <Text style={s.register} onPress={() => router.push("/login")}>
+        <Text style={s.register} onPress={() => router.push("/src/screens/LoginScreen")}>
           Entrar na Conta
         </Text>
 
