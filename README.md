@@ -1,3 +1,5 @@
+
+https://github.com/user-attachments/assets/7952d685-2b0b-45a6-a2a2-53abda3f1cd1
 # Nivelo - Monitor de Glicemia (React Native)
 
 Este é um aplicativo móvel completo, construído com React Native e Expo, projetado para ajudar usuários a monitorar seus níveis de glicemia. Ele utiliza o Firebase (Auth, Firestore e Realtime Database) para autenticação e armazenamento de dados em tempo real.
@@ -65,3 +67,10 @@ O aplicativo conta com um fluxo completo de autenticação e gerenciamento de da
 
 # Desenvolvido por
 - Érik Ordine Garcia | 22.224.021-0
+
+### Video
+
+https://github.com/user-attachments/assets/758de786-b163-4c76-ae88-5903e69eca14
+
+
+
